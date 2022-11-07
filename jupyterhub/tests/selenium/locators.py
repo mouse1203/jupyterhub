@@ -61,6 +61,59 @@ class SpawningPageLocators:
     TEXT_PROGRESS_DETAILS = "Event log"
     PROGRESS_LOG = (By.CLASS_NAME, "progress-log-event")
 
+    """<div class="progress">
+        <div id="progress-bar" class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%;">
+          <span class="sr-only"><span id="sr-progress">0%</span> Complete</span>
+        </div>
+      </div>
+      <p id="progress-message"></p>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-8 col-md-offset-2">
+      <details id="progress-details">
+        <summary>Event log</summary>
+        <div id="progress-log"></div>
+      </details>"""
+
+    """<div class="progress">
+        <div id="progress-bar" class="progress-bar" role="progressbar" aria-valuenow="50" aria-valuemin="0" aria-valuemax="100" style="width: 50%;">
+          <span class="sr-only"><span id="sr-progress">50%</span> Complete</span>
+        </div>
+      </div>
+      <p id="progress-message">Spawning server...</p>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-8 col-md-offset-2">
+      <details id="progress-details">
+        <summary>Event log</summary>
+        <div id="progress-log"><div class="progress-log-event">Server requested</div><div class="progress-log-event">Spawning server...</div></div>
+      </details>"""
+
+    """<div class="progress">
+        <div id="progress-bar" class="progress-bar" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width: 100%;">
+          <span class="sr-only"><span id="sr-progress">100%</span> Complete</span>
+        </div>
+      </div>
+      <p id="progress-message">Server ready at <a href="/@/space%20word/user/test_user1/">/@/space%20word/user/test_user1/</a></p>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-8 col-md-offset-2">
+      <details id="progress-details">
+        <summary>Event log</summary>
+        <div id="progress-log"><div class="progress-log-event">Server requested</div><div class="progress-log-event">Spawning server...</div><div class="progress-log-event">Server ready at <a href="/@/space%20word/user/test_user1/">/@/space%20word/user/test_user1/</a></div></div>
+      </details>"""
+
+
+"""Spawn failed: Server at http://127.0.0.1:53738/@/space%20word/user/test_user1/ didn't respond in 30 seconds
+Event log
+Server requested
+Spawning server...
+Spawn failed: Server at http://127.0.0.1:53738/@/space%20word/user/test_user1/ didn't respond in 30 seconds
+"""
+
 
 class HomePageLocators:
     """class for handling the home page locators"""
