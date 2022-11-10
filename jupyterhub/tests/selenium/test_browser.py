@@ -378,540 +378,83 @@ async def test_spawn_pending_page(app, browser, user="test_user", pass_w="test_u
     assert href_launch.endswith(f"/hub/spawn/{user}")
 
 
-async def test_spawn_pending_launch_server_progress_process_attempt_1(
+async def test_spawn_pending_launch_server_progress_process(
     app, browser, slow_spawn, user="test_user1", pass_w="test_user1"
 ):
-    # attempt1 via size.get("width") of progress bar
-    await open_spawn_pending(app, browser, user, pass_w)
-    button = browser.find_element(*SpawningPageLocators.BUTTON_START_SERVER)
-    click(browser, SpawningPageLocators.BUTTON_START_SERVER)
-    while is_displayed(browser, SpawningPageLocators.BUTTON_START_SERVER):
-        await asyncio.sleep(0.001)
-        print("button exists")
-    progress_pro_span = browser.find_element(*SpawningPageLocators.PROGRESS_PRO)
-    value_progress_pro_span = progress_pro_span.get_attribute("innerHTML")
-    progress_message = browser.find_element(*SpawningPageLocators.PROGRESS_MESSAGE)
-    progressbar = browser.find_element(*SpawningPageLocators.PROGRESS_BAR)
-    progress_persent = (
-        progressbar.get_attribute('style').split(';')[0].split(':')[1].strip()
-    )
-    print(value_progress_pro_span)
-    while (
-        is_displayed(browser, SpawningPageLocators.PROGRESS_BAR)
-        and '/spawn-pending/' in browser.current_url
-    ):
-        i = 0
-        for i in range(0, 1171):
-            i = int(progressbar.size.get("width"))
-            # print(progressbar.size.get("width"))
+    """ "verify that the server process messages are showing up to the user
+    when the server is going to start up"""
 
-            if i < 585:
-                await webdriver_wait(
-                    browser,
-                    EC.text_to_be_present_in_element_attribute(
-                        SpawningPageLocators.PROGRESS_BAR, "aria-valuenow", "0"
-                    ),
-                )
-                assert progress_message.text == "Server requested"
-                assert progress_persent == "0%"
-            if i > 585 and i < 1170:
-                print("2")
-                print(progressbar.get_attribute('aria-valuenow'))
-                await webdriver_wait(
-                    browser,
-                    EC.text_to_be_present_in_element_attribute(
-                        SpawningPageLocators.PROGRESS_BAR, "aria-valuenow", "50"
-                    ),
-                )
-                assert progress_message.text == "Spawning server..."
-                assert progress_persent == "50%"
-            if i >= 1170:
-                print("3")
-                await webdriver_wait(
-                    browser,
-                    EC.text_to_be_present_in_element_attribute(
-                        SpawningPageLocators.PROGRESS_BAR, "aria-valuenow", "100"
-                    ),
-                )
-                assert "Server ready at" in progress_message.text
-                assert progress_persent == "100%"
-            i += 10
-        await asyncio.sleep(0.1)
-
-
-async def test_spawn_pending_launch_server_progress_process_attempt_2(
-    app, browser, slow_spawn, user="test_user1", pass_w="test_user1"
-):
-    # slow_spawn
     await open_spawn_pending(app, browser, user, pass_w)
     click(browser, SpawningPageLocators.BUTTON_START_SERVER)
     while is_displayed(browser, SpawningPageLocators.BUTTON_START_SERVER):
         await asyncio.sleep(0.001)
-        print("button exists")
-    progress_pro_span = browser.find_element(*SpawningPageLocators.PROGRESS_PRO)
-    value_progress_pro_span = progress_pro_span.get_attribute("innerHTML")
-    progress_message = browser.find_element(*SpawningPageLocators.PROGRESS_MESSAGE)
-    progressbar = browser.find_element(*SpawningPageLocators.PROGRESS_BAR)
-    progress_persent = (
-        progressbar.get_attribute('style').split(';')[0].split(':')[1].strip()
-    )
-    print(value_progress_pro_span)
-    while (
-        is_displayed(browser, SpawningPageLocators.PROGRESS_BAR)
-        and '/spawn-pending/' in browser.current_url
-    ):
-        await webdriver_wait(
-            browser,
-            EC.presence_of_element_located(SpawningPageLocators.PROGRESS_MESSAGE),
-        )
-        await asyncio.sleep(0.01)
-        if value_progress_pro_span == "0%":
-            # await webdriver_wait(browser, EC.text_to_be_present_in_element_attribute(SpawningPageLocators.PROGRESS_BAR,"aria-valuenow", "0"))
-            print("pass1")
-        if value_progress_pro_span == "50%":
-            await webdriver_wait(
-                browser,
-                EC.text_to_be_present_in_element_attribute(
-                    SpawningPageLocators.PROGRESS_BAR, "aria-valuenow", "50"
-                ),
-            )
-            assert progress_message.text == "Spawning server..."
-            assert progress_persent == "50%"
-            print("pass2")
-        if value_progress_pro_span == "100%":
-            await webdriver_wait(
-                browser,
-                EC.text_to_be_present_in_element_attribute(
-                    SpawningPageLocators.PROGRESS_BAR, "aria-valuenow", "100"
-                ),
-            )
-            assert "Server ready at" in progress_message.text
-            assert progress_persent == "100%"
-            print("pass3")
-        await asyncio.sleep(0.1)
-
-
-async def test_spawn_pending_launch_server_progress_process_attempt_3(
-    app, browser, slow_spawn, user="test_user1", pass_w="test_user1"
-):
-    def progressbar_is_full(browser, by_locator):
-        progressbar = browser.find_element(*by_locator)
-        return '100' in progressbar.get_attribute('aria-valuenow')
-
-    def progressbar_is_half(browser, by_locator):
-        progressbar = browser.find_element(*by_locator)
-        return '50' in progressbar.get_attribute('aria-valuenow')
-
-    def progressbar_is_0(browser, by_locator):
-        progressbar = browser.find_element(*by_locator)
-        return '0' in progressbar.get_attribute('aria-valuenow')
-
-    await open_spawn_pending(app, browser, user, pass_w)
-    click(browser, SpawningPageLocators.BUTTON_START_SERVER)
-    while is_displayed(browser, SpawningPageLocators.BUTTON_START_SERVER):
-        button = browser.find_element(*SpawningPageLocators.BUTTON_START_SERVER)
-        await webdriver_wait(browser, (EC.staleness_of(button)), timeout=1.1)
-        print("button exists")
-    my_locator = SpawningPageLocators.PROGRESS_BAR
-    progressbar_is_half_ec = partial(progressbar_is_half, by_locator=my_locator)
-    progressbar_is_full_ec = partial(progressbar_is_full, by_locator=my_locator)
-    progressbar_is_0_ec = partial(progressbar_is_0, by_locator=my_locator)
-    progressbar = browser.find_element(*SpawningPageLocators.PROGRESS_BAR)
-    assert is_displayed(browser, SpawningPageLocators.PROGRESS_BAR)
-    style = progressbar.get_attribute('style').split(';')[0].split(':')[1]
-    progress_message = browser.find_element(*SpawningPageLocators.PROGRESS_MESSAGE)
-    progress_pro_span = browser.find_element(*SpawningPageLocators.PROGRESS_PRO)
-    value_progress_pro_span = progress_pro_span.get_attribute("innerHTML")
-    print("1")
-    print(value_progress_pro_span)
-    await webdriver_wait(browser, progressbar_is_0_ec)
-    while (
-        is_displayed(browser, SpawningPageLocators.PROGRESS_BAR)
-        and '/spawn-pending/' in browser.current_url
-    ):
-        await webdriver_wait(browser, progressbar_is_0_ec)
-        print(progressbar_is_0_ec)
-        if value_progress_pro_span == "0%":
-            print("0")
-            print(progressbar_is_0_ec)
-            print("2")
-            print(value_progress_pro_span)
-            await webdriver_wait(browser, progressbar_is_half_ec)
-        if value_progress_pro_span == "50%":
-            print("50")
-            print(progress_message.text)
-            assert progress_message.text == "Spawning server..."
-            await webdriver_wait(browser, progressbar_is_full_ec)
-        if value_progress_pro_span == "100%":
-            print("100")
-            print(progress_message.text)
-            assert "Server ready at" in progress_message.text
-    home_page = url_path_join(public_host(app), ujoin(app.base_url, "hub/home"))
-    await in_thread(browser.get, home_page)
-    assert is_displayed(browser, HomePageLocators.BUTTON_START_SERVER)
-    assert is_displayed(browser, HomePageLocators.BUTTON_STOP_SERVER)
-
-    # a=browser.page_source
-    # print(a)
-    # await webdriver_wait(browser, EC.presence_of_element_located(SpawningPageLocators.PROGRESS_BAR))"""
-
-
-async def test_spawn_pending_click_launch_server_progress_process_attempt_4(
-    app, browser, slow_spawn, user="test_user1", pass_w="test_user1"
-):
-    # slow_spawn
-
-    await open_spawn_pending(app, browser, user, pass_w)
-    button = browser.find_element(*SpawningPageLocators.BUTTON_START_SERVER)
-    u = app.users[orm.User.find(app.db, user)]
-    click(browser, SpawningPageLocators.BUTTON_START_SERVER)
-    await webdriver_wait(browser, EC.staleness_of(button), timeout=2)
     while '/spawn-pending/' in browser.current_url and is_displayed(
         browser, SpawningPageLocators.PROGRESS_BAR
     ):
+        # checking text messages that the server is starting to up
         texts = browser.find_elements(*SpawningPageLocators.TEXT_SERVER)
-        await webdriver_wait(
-            browser,
-            EC.text_to_be_present_in_element_attribute(
-                SpawningPageLocators.PROGRESS_BAR, "aria-valuenow", "0"
-            ),
-        )
-        print(
-            browser.find_element(*SpawningPageLocators.PROGRESS_BAR).get_attribute(
-                "aria-valuenow"
-            )
-        )
-        if int(len(texts)) != 0:
-            texts_list = []
-            for text in texts:
-                text.text
-                texts_list.append(text.text)
-                print("text.text")
-                print(text.text)
-            assert str(texts_list[0]) == SpawningPageLocators.TEXT_SERVER_STARTING
-            assert str(texts_list[1]) == SpawningPageLocators.TEXT_SERVER_REDIRECT
-            # event log
-            progress_logs = browser.find_elements(*SpawningPageLocators.PROGRESS_LOG)
-            logs_list = []
-            for log in progress_logs:
-                log.text
-                logs_list.append(log.text)
-                print(log.text)
-            ignored_exceptions = (
-                NoSuchElementException,
-                StaleElementReferenceException,
-            )
-            your_element = WebDriverWait(
-                browser, 50, poll_frequency=0.1, ignored_exceptions=ignored_exceptions
-            ).until(
-                EC.text_to_be_present_in_element_attribute(
-                    SpawningPageLocators.PROGRESS_BAR, "aria-valuenow", "100"
+        texts_list = []
+        for text in texts:
+            text.text
+            texts_list.append(text.text)
+        assert str(texts_list[0]) == SpawningPageLocators.TEXT_SERVER_STARTING
+        assert str(texts_list[1]) == SpawningPageLocators.TEXT_SERVER_REDIRECT
+        # checking progress of the servers starting (messages, % progress and events log))
+        logs_list = []
+        # await asyncio.sleep(0.001)
+        try:
+            progress_bar = browser.find_element(*SpawningPageLocators.PROGRESS_BAR)
+            progress = browser.find_elements(*SpawningPageLocators.PROGRESS_MESSAGE)
+            logs = browser.find_elements(*SpawningPageLocators.PROGRESS_LOG)
+            for status_message in progress:
+                progress_messages = status_message.text
+                percent = (
+                    progress_bar.get_attribute('style')
+                    .split(';')[0]
+                    .split(':')[1]
+                    .strip()
                 )
-            )
-            print(your_element.get_attribute("aria-valuenow"))
-            # await webdriver_wait(browser, EC.text_to_be_present_in_element_attribute(SpawningPageLocators.PROGRESS_BAR,"aria-valuenow", "100"))
-        break
-    home_page = url_path_join(public_host(app), ujoin(app.base_url, "hub/home"))
-    await in_thread(browser.get, home_page)
-    assert is_displayed(browser, HomePageLocators.BUTTON_START_SERVER)
-    assert is_displayed(browser, HomePageLocators.BUTTON_STOP_SERVER)
-
-
-@pytest.mark.parametrize(
-    'running, status',
-    [
-        (False, "0"),
-        # (
-        #     (False, "process"),
-        # ),
-        (True, "100"),
-    ],
-)
-async def test_spawn_pending_click_launch_server_pro0(
-    app, browser, slow_spawn, running, status, user="test_user1", pass_w="test_user1"
-):
-    # slow_spawn
-
-    await open_spawn_pending(app, browser, user, pass_w)
-    button = browser.find_element(*SpawningPageLocators.BUTTON_START_SERVER)
-    u = app.users[orm.User.find(app.db, user)]
-    click(browser, SpawningPageLocators.BUTTON_START_SERVER)
-    while is_displayed(browser, SpawningPageLocators.BUTTON_START_SERVER):
-        # await webdriver_wait(browser, (EC.staleness_of(button)), timeout=1)
-        await asyncio.sleep(0.1)
-        print("button exists")
-    if running == False:
-        await webdriver_wait(
-            browser, EC.visibility_of_element_located(SpawningPageLocators.PROGRESS_BAR)
-        )
-        await webdriver_wait(
-            browser,
-            EC.text_to_be_present_in_element_attribute(
-                SpawningPageLocators.PROGRESS_BAR, "aria-valuenow", status
-            ),
-        )
-        progress_logs = browser.find_elements(*SpawningPageLocators.PROGRESS_LOG)
-
-    if running:
-        while '/spawn-pending/' in browser.current_url:
-            print("123")
-            count = int(status)
-            count += 1
-            while not is_displayed(browser, SpawningPageLocators.PROGRESS_MESSAGE):
-                # await webdriver_wait(browser, (EC.staleness_of(button)), timeout=1)
-                await asyncio.sleep(0.01)
-                progress_pro_span = browser.find_element(
-                    *SpawningPageLocators.PROGRESS_PRO
-                )
-                value_progress_pro_span = progress_pro_span.get_attribute("innerHTML")
-
-            # await webdriver_wait(browser, EC.text_to_be_present_in_element_attribute(SpawningPageLocators.PROGRESS_BAR,"aria-valuenow", status))
-            print(count)
-            await webdriver_wait(
-                browser,
-                EC.visibility_of_element_located(SpawningPageLocators.PROGRESS_MESSAGE),
-            )
-            progress_pro_span = browser.find_element(*SpawningPageLocators.PROGRESS_PRO)
-            value_progress_pro_span = progress_pro_span.get_attribute("innerHTML")
-            while value_progress_pro_span != "100%":
-                print("1234")
-                await asyncio.sleep(0.01)
-                # await webdriver_wait(browser, EC.text_to_be_present_in_element(SpawningPageLocators.PROGRESS_MESSAGE,SpawningPageLocators.TEXT_PROGRESS_MESSAGE_READY))
-            progress_logs = browser.find_elements(*SpawningPageLocators.PROGRESS_LOG)
-            progress_message = browser.find_element(
-                *SpawningPageLocators.PROGRESS_MESSAGE
-            )
-
-    # await webdriver_wait(browser, EC.staleness_of(button), timeout=2)
-    # await webdriver_wait(browser, EC.staleness_of(button), timeout=2)
-    # browser.execute_script("window.stop();")
-    """while '/spawn-pending/' in browser.current_url:
-        texts = browser.find_elements(*SpawningPageLocators.TEXT_SERVER)
-        #browser.execute_script("window.stop();")
-        if int(len(texts)) != 0:
-            texts_list = []
-            for text in texts:
-                text.text
-                texts_list.append(text.text)
-                print("text.text")
-                print(text.text)
-            assert str(texts_list[0]) == SpawningPageLocators.TEXT_SERVER_STARTING
-            assert str(texts_list[1]) == SpawningPageLocators.TEXT_SERVER_REDIRECT"""
-    """if not u.spawner.ready:
-                print("not u.spawner.ready:")
-                while str(texts_list[2]) == '':
-                    await webdriver_wait(browser, EC.text_to_be_present_in_element(SpawningPageLocators.PROGRESS_MESSAGE,SpawningPageLocators.TEXT_PROGRESS_MESSAGE_SPWN))
-                    print("after none not u.spawner.ready:")
-                    await asyncio.sleep(0.01)
-                assert (str(texts_list[2])== SpawningPageLocators.TEXT_PROGRESS_MESSAGE_SPWN)
-            while u.spawner.ready:
-                print("u.spawner.ready:")
-                assert SpawningPageLocators.TEXT_PROGRESS_MESSAGE_READY in str(texts_list[2])# == (SpawningPageLocators.TEXT_PROGRESS_MESSAGE_READY+ (app.base_url, f"/user/{user}/"))"""
-    """await webdriver_wait(browser, EC.text_to_be_present_in_element_attribute(SpawningPageLocators.PROGRESS_BAR,"aria-valuenow", "100"))
-            progress_logs = browser.find_elements(*SpawningPageLocators.PROGRESS_LOG)
-            logs_list = []
-            for log in progress_logs:
-                log.text
-                logs_list.append(log.text)
-                print(log.text)
-        break  """
-    """home_page = url_path_join(public_host(app), ujoin(app.base_url, "hub/home"))
-    await in_thread(browser.get, home_page)
-    assert u.spawner.ready
-    assert is_displayed(browser, HomePageLocators.BUTTON_START_SERVER)
-    assert is_displayed(browser, HomePageLocators.BUTTON_STOP_SERVER)"""
-
-
-async def test_spawn_pending_click_launch_server_progress_process_attempt_5(
-    app, browser, slow_spawn, user="test_user1", pass_w="test_user1"
-):
-    # slow_spawn
-
-    await open_spawn_pending(app, browser, user, pass_w)
-    button = browser.find_element(*SpawningPageLocators.BUTTON_START_SERVER)
-    u = app.users[orm.User.find(app.db, user)]
-    click(browser, SpawningPageLocators.BUTTON_START_SERVER)
-    await webdriver_wait(browser, EC.staleness_of(button), timeout=2)
-    # browser.execute_script("window.stop();")
-    # await webdriver_wait(browser, EC.invisibility_of_element(button), timeout=2)
-    while (
-        is_displayed(browser, SpawningPageLocators.BUTTON_START_SERVER)
-        and '/spawn-pending/' in browser.current_url
-    ):
-        print("#####message____")
-        while not u.spawner.ready:
-            progress_messages = browser.find_elements(
-                *SpawningPageLocators.PROGRESS_MESSAGE
-            )
-            message_list = []
-            for message in progress_messages:
-                message.text
-                message_list.append(message.text)
-                print("#####message____message")
-                print(message.text)
-                # await asyncio.sleep(0.1)
-                """progress_logs = browser.find_elements(*SpawningPageLocators.PROGRESS_LOG)
-                    logs_list = []
-                    for log in progress_logs:
-                        log.text
-                        logs_list.append(log.text)
-                        print("#####")
-                        print(log.text)
-                    #await asyncio.sleep(0.1)
-                    break
-                print("2 u.spawner.ready")
-                print(u.spawner.ready)"""
-                # await browser.execute_async_script("window.location.reload();")
-                # await asyncio.sleep(0.7)
-                a = browser.page_source
-                print(a)
-                progress = await api_request(
-                    app, 'users', user, 'server/progress', stream=True
-                )
-                ex = async_requests.executor
-                line_iter = iter(progress.iter_lines(decode_unicode=True))
-                evt = True
-                while evt is not None:
-                    evt = await ex.submit(next_event, line_iter)
-                    if evt:
-                        print(evt)
-
-        # break
-        # elif  u.spawner.ready:
-
-        await webdriver_wait(
-            browser,
-            EC.text_to_be_present_in_element(
-                SpawningPageLocators.PROGRESS_MESSAGE,
-                SpawningPageLocators.TEXT_PROGRESS_MESSAGE_READY,
-            ),
-            timeout=20,
-        )
-        b = browser.page_source
-        print(b)
-        """#time.sleep(50)
-                await webdriver_wait(browser, EC.text_to_be_present_in_element(SpawningPageLocators.PROGRESS_MESSAGE,SpawningPageLocators.TEXT_PROGRESS_MESSAGE_READY),timeout=20)
-                if u.spawner.ready:# u.spawner.ready: 
-                    print("u.spawner.ready")
-                    while u.spawner.ready:   
-                        texts = browser.find_elements(*SpawningPageLocators.TEXT_SERVER)
-                        print(u.spawner.ready)
-                        time.sleep(50)
-                        await webdriver_wait(browser, EC.text_to_be_present_in_element(SpawningPageLocators.PROGRESS_MESSAGE,SpawningPageLocators.TEXT_PROGRESS_MESSAGE_READY))#,timeout=20)
-                        texts_list = []
-                        for text in texts:
-                            text.text
-                            texts_list.append(text.text)
-                            print(text.text)
-                break
-            #time.sleep(10)       
-        if u.spawner.ready:# u.spawner.ready: 
-            print("u.spawner.ready")
-            while u.spawner.ready:   
-                texts = browser.find_elements(*SpawningPageLocators.TEXT_SERVER)
-                print(u.spawner.ready)
-                time.sleep(50)
-                await webdriver_wait(browser, EC.text_to_be_present_in_element(SpawningPageLocators.PROGRESS_MESSAGE,SpawningPageLocators.TEXT_PROGRESS_MESSAGE_READY))#,timeout=20)
-                texts_list = []
-                for text in texts:
-                    text.text
-                    texts_list.append(text.text)
-                    print(text.text)
-                    #print(str(texts_list[2])) """
-        """print("u.spawner.ready")
-            while u.spawner.ready:   
-                texts = browser.find_elements(*SpawningPageLocators.TEXT_SERVER)
-                print(u.spawner.ready)
-                time.sleep(50)
-                await webdriver_wait(browser, EC.text_to_be_present_in_element(SpawningPageLocators.PROGRESS_MESSAGE,SpawningPageLocators.TEXT_PROGRESS_MESSAGE_READY))#,timeout=20)
-                texts_list = []
-                for text in texts:
-                    text.text
-                    texts_list.append(text.text)
-                    print(text.text)
-                    #print(str(texts_list[2]))"""
-
-    home_page = url_path_join(public_host(app), ujoin(app.base_url, "hub/home"))
-    await in_thread(browser.get, home_page)
-    assert is_displayed(browser, HomePageLocators.BUTTON_START_SERVER)
-    assert is_displayed(browser, HomePageLocators.BUTTON_STOP_SERVER)
-
-    """if not u.spawner.ready:
-                while str(texts_list[2]) == None:
-                    await asyncio.sleep(0.5)
+                for i in range(len(logs)):
+                    progress_log = logs[i].text
+                    logs_list.append(progress_log)
+                if progress_messages == "":
+                    print("progress_messages==" "-")
+                    assert percent == "0%"
+                    assert int(len(logs_list)) == 0
+                if progress_messages == "Server requested":
+                    print("progress_messages==Server requested")
+                    assert percent == "0%"
+                    assert int(len(logs_list)) == 1
+                    assert str(logs_list[0]) == "Server requested"
+                if progress_messages == "Spawning server...":
+                    print("progress_messages==Spawning server...")
+                    assert percent == "50%"
+                    assert int(len(logs_list)) == 2
+                    assert str(logs_list[0]) == "Server requested"
+                    assert str(logs_list[1]) == "Spawning server..."
+                if "Server ready at" in progress_messages:
+                    print("progress_messages==Server ready at")
                     assert (
-                        str(texts_list[2])
-                        == SpawningPageLocators.TEXT_PROGRESS_MESSAGE_SPWN
+                        f"Server ready at {app.base_url}user/{user}/"
+                        in progress_messages
                     )
-            elif u.spawner.ready:
-                assert str(texts_list[2]) == str(
-                    SpawningPageLocators.TEXT_PROGRESS_MESSAGE_READY
-                    + (app.base_url, f"/user/{user}/")
-                )"""
-
-    """while not u.spawner.ready:
-            browser.set_script_timeout(150)
-            await asyncio.sleep(0.1)"""
-
-    """while u.spawner.ready:
-                texts = browser.find_elements(*SpawningPageLocators.TEXT_SERVER)
-                print(u.spawner.ready)
-                time.sleep(50)
-                await webdriver_wait(browser, EC.text_to_be_present_in_element(SpawningPageLocators.PROGRESS_MESSAGE,SpawningPageLocators.TEXT_PROGRESS_MESSAGE_READY))#,timeout=20)
-                texts_list = []
-                for text in texts:
-                    text.text
-                    texts_list.append(text.text)
-                    print(text.text)
-                #print(str(texts_list[2]))"""
+                    assert percent == "100%"
+                    assert int(len(logs_list)) == 3
+                    assert str(logs_list[0]) == "Server requested"
+                    assert str(logs_list[1]) == "Spawning server..."
+                    assert (
+                        str(logs_list[2])
+                        == f"Server ready at {app.base_url}user/{user}/"
+                    )
+                    assert str(logs_list[2]) == progress_messages
+        except NoSuchElementException:
+            break
+        except StaleElementReferenceException:
+            break
+        await asyncio.sleep(0.001)
 
 
-async def test_spawn_pending_click_launch_server_progress_process_attempt_6(
-    app, browser, slow_spawn, user="test_user1", pass_w="test_user1"
-):
-    # slow_spawn
-
-    await open_spawn_pending(app, browser, user, pass_w)
-    button = browser.find_element(*SpawningPageLocators.BUTTON_START_SERVER)
-    u = app.users[orm.User.find(app.db, user)]
-    click(browser, SpawningPageLocators.BUTTON_START_SERVER)
-    await webdriver_wait(browser, EC.staleness_of(button), timeout=2)
-    while '/spawn-pending/' in browser.current_url and is_displayed(
-        browser, SpawningPageLocators.PROGRESS_BAR
-    ):
-        percent_progres = int(
-            browser.find_element(*SpawningPageLocators.PROGRESS_BAR).get_attribute(
-                "aria-valuenow"
-            )
-        )
-        while percent_progres < 100:
-            texts = browser.find_elements(*SpawningPageLocators.TEXT_SERVER)
-            print(percent_progres)
-        """if int(len(texts)) != 0:
-            texts_list = []
-            for text in texts:
-                text.text
-                texts_list.append(text.text)
-                print("text.text")
-                print(text.text)
-            assert str(texts_list[0]) == SpawningPageLocators.TEXT_SERVER_STARTING
-            assert str(texts_list[1]) == SpawningPageLocators.TEXT_SERVER_REDIRECT
-            #event log
-            progress_logs = browser.find_elements(*SpawningPageLocators.PROGRESS_LOG)
-            logs_list = []
-            for log in progress_logs:
-                log.text
-                logs_list.append(log.text)
-                print(log.text)
-            await webdriver_wait(browser, EC.text_to_be_present_in_element_attribute(SpawningPageLocators.PROGRESS_BAR,"aria-valuenow", "100")) 
-        break"""
-    home_page = url_path_join(public_host(app), ujoin(app.base_url, "hub/home"))
-    await in_thread(browser.get, home_page)
-    assert is_displayed(browser, HomePageLocators.BUTTON_START_SERVER)
-    assert is_displayed(browser, HomePageLocators.BUTTON_STOP_SERVER)
-
-
-async def test_spawn_pending_click_launch_server(
+async def test_spawn_pending_launch_server(
     app, browser, user="test_user1", pass_w="test_user1"
 ):
 
@@ -926,97 +469,6 @@ async def test_spawn_pending_click_launch_server(
     assert u.spawner.ready
     assert is_displayed(browser, HomePageLocators.BUTTON_START_SERVER)
     assert is_displayed(browser, HomePageLocators.BUTTON_STOP_SERVER)
-
-
-async def test_spawn_pending_launch_server_failed(
-    app, browser, slow_spawn, user="test_user1", pass_w="test_user1"
-):
-    ##need to rewrite case
-    """Spawn failed: Server at http://127.0.0.1:53738/@/space%20word/user/test_user1/ didn't respond in 30 seconds
-    Event log
-    Server requested
-    Spawning server...
-    Spawn failed: Server at http://127.0.0.1:53738/@/space%20word/user/test_user1/ didn't respond in 30 seconds
-    """
-    ####################
-    await open_spawn_pending(app, browser, user, pass_w)
-    button = browser.find_element(*SpawningPageLocators.BUTTON_START_SERVER)
-    click(browser, SpawningPageLocators.BUTTON_START_SERVER)
-    while is_displayed(browser, SpawningPageLocators.BUTTON_START_SERVER):
-        await asyncio.sleep(0.001)
-        print("button exists")
-    progress_pro_span = browser.find_element(*SpawningPageLocators.PROGRESS_PRO)
-    value_progress_pro_span = progress_pro_span.get_attribute("innerHTML")
-    progress_message = browser.find_element(*SpawningPageLocators.PROGRESS_MESSAGE)
-    progressbar = browser.find_element(*SpawningPageLocators.PROGRESS_BAR)
-    progress_persent = (
-        progressbar.get_attribute('style').split(';')[0].split(':')[1].strip()
-    )
-    print(value_progress_pro_span)
-    while (
-        is_displayed(browser, SpawningPageLocators.PROGRESS_BAR)
-        and '/spawn-pending/' in browser.current_url
-    ):
-        i = 0
-        for i in range(0, 1171):
-            # await asyncio.sleep(0.01)
-            i = int(progressbar.size.get("width"))
-            # print(progressbar.size.get("width"))
-            # i+=10
-            if i < 585:
-                # await webdriver_wait(browser, EC.text_to_be_present_in_element_attribute(SpawningPageLocators.PROGRESS_BAR,"aria-valuenow", "0"))
-                while not is_displayed(browser, SpawningPageLocators.PROGRESS_MESSAGE):
-                    await asyncio.sleep(0.001)
-                print(progress_message.text)
-                await webdriver_wait(
-                    browser,
-                    EC.text_to_be_present_in_element(
-                        SpawningPageLocators.PROGRESS_MESSAGE, "Server requested"
-                    ),
-                )
-                print("1")
-                print(progress_message.text)
-                """while progress_message.text != "Server requested":
-                    await asyncio.sleep(0.01)"""
-                assert progress_message.text == "Server requested"
-                assert progress_persent == "0%"
-            if i > 585 and i < 1170:
-                print("2")
-                print(progressbar.get_attribute('aria-valuenow'))
-                await webdriver_wait(
-                    browser,
-                    EC.text_to_be_present_in_element_attribute(
-                        SpawningPageLocators.PROGRESS_BAR, "aria-valuenow", "50"
-                    ),
-                )
-                assert progress_message.text == "Spawning server..."
-                assert progress_persent == "50%"
-            if i >= 1170:
-                print("3")
-                await webdriver_wait(
-                    browser,
-                    EC.text_to_be_present_in_element_attribute(
-                        SpawningPageLocators.PROGRESS_BAR, "aria-valuenow", "100"
-                    ),
-                )
-                assert "Server ready at" in progress_message.text
-                assert progress_persent == "100%"
-            i += 10
-        await asyncio.sleep(0.1)
-    ########################
-    progress_logs = browser.find_elements(*SpawningPageLocators.PROGRESS_LOG)
-    logs_list = []
-    for log in progress_logs:
-        log.text
-        logs_list.append(log.text)
-        print(log.text)
-    # one of buttons should be displayed
-    home_page = url_path_join(public_host(app), ujoin(app.base_url, "hub/home"))
-    await in_thread(browser.get, home_page)
-    assert is_displayed(browser, HomePageLocators.BUTTON_START_SERVER)
-    name_button = browser.find_elements(*HomePageLocators.BUTTON_START_SERVER)
-    assert name_button == HomePageLocators.BUTTON_START_SERVER_NAME_DOWN
-    assert not is_displayed(browser, HomePageLocators.BUTTON_STOP_SERVER)
 
 
 # HOME PAGE
