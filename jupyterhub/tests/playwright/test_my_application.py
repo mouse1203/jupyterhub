@@ -1357,17 +1357,25 @@ async def test_oauth_page(
 # ADMIN UI
 
 
-async def open_admin_page(app, browser, user):
+async def open_admin_page(app, browser, login_as=None):
     """Login as `user` and open the admin page"""
     admin_page = url_escape(app.base_url) + "hub/admin"
-    url = url_path_join(public_host(app), app.hub.base_url, "/login?next=" + admin_page)
-    await browser.goto(url)
-    await login(browser, user.name, password=str(user.name))
-    await expect(browser).to_have_url(re.compile(".*/hub/admin"))
+    if login_as:
+        user = login_as
+        url = url_path_join(
+            public_host(app), app.hub.base_url, "/login?next=" + admin_page
+        )
+        await browser.goto(url)
+        await login(browser, user.name, password=str(user.name))
+        await expect(browser).to_have_url(re.compile(".*/hub/admin"))
+    else:
+        # url = url_path_join(public_host(app), app.hub.base_url, "/login?next=" + admin_page)
+        await browser.goto(admin_page)
+        await expect(browser).to_have_url(re.compile(".*/hub/admin"))
 
 
 def create_list_of_users(create_user_with_scopes, n):
-    return [create_user_with_scopes(["users"]) for i in range(1, n)]
+    return [create_user_with_scopes("self") for i in range(n)]
 
 
 async def test_start_stop_all_servers_on_admin_page(app, browser, admin_user):
@@ -1545,56 +1553,48 @@ async def test_search_on_admin_page(
             await expect(element).to_contain_text(re.compile(f".*{search_value}.*"))
 
 
-@pytest.mark.parametrize("added_count_users,index_user_1, index_user_2", [(5, 1, 0)])
 async def test_start_stop_server_on_admin_page(
     app,
     browser,
     admin_user,
     create_user_with_scopes,
-    added_count_users,
-    index_user_1,
-    index_user_2,
 ):
-    async def start_user(browser, expected_user, index):
+    async def click_start_server(browser, username):
         """start the server for one user via the Start Server button, index = 0 or 1"""
-        user = expected_user[index]
-        start_btn_xpath = f'//a[contains(@href, "spawn/{user}")]/preceding-sibling::button[contains(@class, "start-button")]'
+        start_btn_xpath = f'//a[contains(@href, "spawn/{username}")]/preceding-sibling::button[contains(@class, "start-button")]'
         start_btn = browser.locator(start_btn_xpath)
         await expect(start_btn).to_be_enabled()
         await start_btn.click()
 
-    async def spawn_user(browser, expected_user, index):
+    async def click_spawn_page(browser, username):
         """spawn the server for one user via the Spawn page button, index = 0 or 1"""
-        user = expected_user[index]
-        spawn_btn_xpath = f'//a[contains(@href, "spawn/{user}")]/button[contains(@class, "secondary")]'
+        spawn_btn_xpath = f'//a[contains(@href, "spawn/{username}")]/button[contains(@class, "secondary")]'
         spawn_btn = browser.locator(spawn_btn_xpath)
         await expect(spawn_btn).to_be_enabled()
-        async with browser.expect_navigation(url=f"**/user/{user}/"):
+        async with browser.expect_navigation(url=f"**/user/{username}/"):
             await spawn_btn.click()
 
-    async def access_srv_user(browser, expected_user):
+    async def click_access_server(browser, username):
         """access to the server for users via the Access Server button"""
-        for user in expected_user:
-            access_btn_xpath = f'//a[contains(@href, "user/{user}")]/button[contains(@class, "primary")]'
-            access_btn = browser.locator(access_btn_xpath)
-            await expect(access_btn).to_be_enabled()
-            await access_btn.click()
-            await browser.go_back()
+        access_btn_xpath = f'//a[contains(@href, "user/{username}")]/button[contains(@class, "primary")]'
+        access_btn = browser.locator(access_btn_xpath)
+        await expect(access_btn).to_be_enabled()
+        await access_btn.click()
+        await browser.go_back()
 
-    async def stop_srv_users(browser, expected_user):
+    async def click_stop_button(browser, username):
         """stop the server for one user via the Stop Server button"""
-        for user in expected_user:
-            stop_btn_xpath = f'//a[contains(@href, "user/{user}")]/preceding-sibling::button[contains(@class, "stop-button")]'
-            stop_btn = browser.locator(stop_btn_xpath)
-            await expect(stop_btn).to_be_enabled()
-            await stop_btn.click()
+        stop_btn_xpath = f'//a[contains(@href, "user/{username}")]/preceding-sibling::button[contains(@class, "stop-button")]'
+        stop_btn = browser.locator(stop_btn_xpath)
+        await expect(stop_btn).to_be_enabled()
+        await stop_btn.click()
 
-    create_list_of_users(create_user_with_scopes, added_count_users)
+    user1, user2 = create_list_of_users(create_user_with_scopes, 2)
     await open_admin_page(app, browser, admin_user)
     users = await browser.locator('//td[@data-testid="user-row-name"]').all()
     users_list = [await user.text_content() for user in users]
     users_list = [user.strip() for user in users_list]
-    expected_user = [users_list[index_user_1], users_list[index_user_2]]
+    assert {user1.name, user2.name}.issubset({e for e in users_list})
 
     # check that all users have correct link for Spawn Page
     spawn_page_btns = browser.locator(
@@ -1608,7 +1608,7 @@ async def test_start_stop_server_on_admin_page(
         assert f"/spawn/{user_from_table}" in link
 
     # click on Start button
-    await start_user(browser, expected_user, index=0)
+    await click_start_server(browser, user1.name)
     await expect(browser.get_by_role("button", name="Stop Server")).to_have_count(1)
     await expect(browser.get_by_role("button", name="Start Server")).to_have_count(
         len(users_list) - 1
@@ -1618,8 +1618,8 @@ async def test_start_stop_server_on_admin_page(
     )
 
     # click on Spawn page button
-    await spawn_user(browser, expected_user, index=1)
-    await expect(browser).to_have_url(re.compile(".*" + f"/user/{expected_user[1]}/"))
+    await click_spawn_page(browser, user2.name)
+    await expect(browser).to_have_url(re.compile(".*" + f"/user/{user2.name}/"))
 
     # open/return to the Admin page
     admin_page = url_path_join(public_host(app), app.hub.base_url, "admin")
@@ -1631,14 +1631,17 @@ async def test_start_stop_server_on_admin_page(
     )
 
     # click on the Access button
-    await access_srv_user(browser, expected_user)
+    await click_access_server(browser, user1.name)
     await expect(browser.get_by_role("button", name="Stop Server")).to_have_count(2)
     await expect(browser.get_by_role("button", name="Start Server")).to_have_count(
         len(users_list) - 2
     )
 
     # click on Stop button for both users
-    await stop_srv_users(browser, expected_user)
+    [
+        await click_stop_button(browser, username)
+        for username in (user1.name, user2.name)
+    ]
     await expect(browser.get_by_role("button", name="Stop Server")).to_have_count(0)
     await expect(browser.get_by_role("button", name="Access Server")).to_have_count(0)
     await expect(browser.get_by_role("button", name="Start Server")).to_have_count(
