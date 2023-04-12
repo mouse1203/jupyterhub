@@ -1,10 +1,8 @@
 """Tests for the Playwright Python"""
 
-import asyncio
-import contextlib
 import json
 import re
-import urllib.parse
+from urllib.parse import parse_qs, urlparse
 
 import pytest
 from playwright.async_api import expect
@@ -187,651 +185,92 @@ async def test_spawn_pending_server_not_started(
 
 
 @pytest.mark.xfail(reason="flaky on CI")
-async def test_spawn_pending_progress00(
-    app, browser, no_patience, user, slow_spawn, slow_mo=10000
-):
+async def test_spawn_pending_progress1(app, browser, no_patience, user, slow_spawn):
     """verify that the server process messages are showing up to the user
     when the server is going to start up"""
-    # begin starting the server
-    # await api_request(app, f"/users/{user.name}/server", method="post")
-    # visit the spawn-pending page
 
+    # visit the spawn-pending page
     await open_spawn_pending(app, browser, user)
-    launch_btn = browser.locator('//div[@class="text-center"]').get_by_role(
+    launch_btn = browser.locator("//div[@class='text-center']").get_by_role(
         "button", name="Launch Server"
     )
     await expect(launch_btn).to_be_enabled()
 
-    await launch_btn.click()
-
-    while '/spawn-pending/' in browser.url:
-        progress_message = browser.locator("#progress-message").inner_text()
-        # checking text messages that the server is starting to up
-
-        # checking progress of the servers starting (messages, % progress and events log))
-        progress_bar = browser.locator('#progress-bar')
-        progress = browser.locator("#progress-message")
-        logs = browser.locator('#progress-log-event')
-        percent = await progress_bar.get_attribute('style')
-        percent = percent.split(';')[0].split(':')[1].strip()
-        # percent_el=await browser.wait_for_selector('#progress-bar[aria-valuenow]')
-        # percent=int(await percent_el.get_attribute('aria-valuenow').all())
-        logs_list = [log.text for log in await logs.all() if log.text]
-        if await progress_message == "":
-            assert percent == "0%"
-            assert len(logs_list) == 0
-        elif progress_message == "Server requested":
-            assert percent == "0%"
-            assert len(logs_list) == 1
-            assert str(logs_list[0]) == "Server requested"
-        elif progress_message == "Spawning server...":
-            assert percent == "50%"
-            assert len(logs_list) == 2
-            assert str(logs_list[0]) == "Server requested"
-            assert str(logs_list[1]) == "Spawning server..."
-        elif "Server ready at" in progress_message:
-            assert (
-                f"Server ready at {app.base_url}user/{user.name}/" in progress_message
-            )
-            assert percent == "100%"
-            assert len(logs_list) == 3
-            assert str(logs_list[0]) == "Server requested"
-            assert str(logs_list[1]) == "Spawning server..."
-            assert (
-                str(logs_list[2]) == f"Server ready at {app.base_url}user/{user.name}/"
-            )
-            assert str(logs_list[2]) == progress_message
-
-
-@pytest.mark.xfail(reason="flaky on CI")
-async def test_spawn_pending_progress0(
-    app, browser, no_patience, user, slow_spawn, slow_mo=10000
-):
-    """verify that the server process messages are showing up to the user
-    when the server is going to start up"""
     # begin starting the server
-    # await api_request(app, f"/users/{user.name}/server", method="post")
-    # visit the spawn-pending page
-
-    await open_spawn_pending(app, browser, user)
-    launch_btn = browser.locator('//div[@class="text-center"]').get_by_role(
-        "button", name="Launch Server"
-    )
-    await expect(launch_btn).to_be_enabled()
-
-    await launch_btn.click()
-    while '/spawn-pending/' in browser.url:
-        # Verify the progress messages
-        progress_message = browser.locator("#progress-message")
-        progress_messages = [
-            "Server requested",
-            "Spawning server...",
-            "Server ready at ",
-        ]
-        for message in progress_messages:
-            await browser.wait_for_selector(f"#progress-message:has-text('{message}')")
-
-        # Verify the progress log events
-        progress_log = await browser.locator("#progress-log")
-        events = await progress_log.locator_all(".progress-log-event")
-        assert len(events) >= len(progress_messages)
-        for event, message in zip(events, progress_messages):
-            assert message in await event.inner_text()
-    # await browser.wait_for_selector('#progress-bar[aria-valuenow="0"]')
-    """
-    # Get the progress bar elements
-    progress_bar = await browser.query_selector('#progress-bar')
-    sr_progress = await browser.query_selector('#sr-progress')
-    progress_message = await browser.query_selector('#progress-message')
-
-    # Get the progress bar value
-    progress_bar_value = await progress_bar.get_attribute('aria-valuenow')
-
-    # Get the progress message text
-    progress_message_text = await progress_message.text_content().strip()
-
-    # Get the screen reader progress text
-    sr_progress_text = await sr_progress.text_content().strip()
-
-    # Verify the progress bar value and message
-    if progress_bar_value == '0' and progress_message_text == '' and sr_progress_text == '0% Complete':
-        print('Progress bar is initialized correctly')
-    else:
-        print('Progress bar is not initialized correctly')"""
-
-
-@pytest.mark.xfail(reason="flaky on CI")
-async def test_spawn_pending_progress10(app, browser, no_patience, user, slow_spawn):
-    """verify that the server process messages are showing up to the user
-    when the server is going to start up"""
-    # begin starting the server
-    # visit the spawn-pending page
-
-    await open_spawn_pending(app, browser, user)
-    launch_btn = browser.locator('//div[@class="text-center"]').get_by_role(
-        "button", name="Launch Server"
-    )
-    await expect(launch_btn).to_be_enabled()
-
-    await launch_btn.click()
-
-    # use context manager to synchronize access to progress_message
-    async with contextlib.AsyncExitStack() as stack:
-        progress_message_lock = stack.enter_async_context(asyncio.Lock())
-        # progress_message_lock = stack.enter_async_context(asyncio.Lock())
-        progress_message = None
-
-        # loop until progress bar disappears
-        while '/spawn-pending/' in browser.url:
-            # get the latest progress message
-            new_progress_message = await browser.locator(
-                "#progress-message"
-            ).inner_text()
-
-            async with progress_message_lock:
-                # check if progress message has changed
-                if new_progress_message != progress_message:
-                    progress_message = new_progress_message
-
-                    # checking text messages that the server is starting to up
-                    expected_messages = [
-                        "Server requested",
-                        "Spawning server...",
-                        f"Server ready at {app.base_url}user/{user.name}/",
-                    ]
-
-                    assert progress_message in expected_messages
-
-                    # checking progress of the servers starting (messages, % progress and events log))
-                    progress_bar = browser.locator('#progress-bar')
-                    percent_el = await browser.wait_for_selector(
-                        '#progress-bar[aria-valuenow]'
-                    )
-                    percent = int(await percent_el.get_attribute('aria-valuenow'))
-                    logs = browser.locator('#progress-log-event')
-                    logs_list = [log.text for log in await logs.all() if log.text]
-
-                    if logs_list:
-                        # race condition: progress_message _should_
-                        # be the last log message, but it _may_ be the next one
-                        assert progress_message
-
-                    assert logs_list == expected_messages[: len(logs_list)]
-
-            # wait for some time before checking again
-            await asyncio.sleep(0.2)
-
-        # wait for the launch button to become detached
-        await launch_btn.wait_for(state='detached')
-
-
-@pytest.mark.xfail(reason="flaky on CI")
-async def test_spawn_pending_progress11(app, browser, no_patience, user, slow_spawn):
-    """verify that the server process messages are showing up to the user
-    when the server is going to start up"""
-    # begin starting the server
-    # visit the spawn-pending page
-
-    await open_spawn_pending(app, browser, user)
-    launch_btn = browser.locator('//div[@class="text-center"]').get_by_role(
-        "button", name="Launch Server"
-    )
-    await expect(launch_btn).to_be_enabled()
-
-    await launch_btn.click()
-
-    # use context manager to synchronize access to progress_message
-    async with contextlib.AsyncExitStack() as stack:
-        progress_message_lock = asyncio.Lock()
-        progress_message = ""
-        percent_lock = asyncio.Lock()
-        percent = 0
-
-        # loop until progress bar disappears
-        while '/spawn-pending/' in browser.url:
-            # get the latest progress message
-            new_progress_message = await browser.locator(
-                "#progress-message"
-            ).inner_text()
-            percent_el = await browser.wait_for_selector('#progress-bar[aria-valuenow]')
-            new_percent = int(await percent_el.get_attribute('aria-valuenow'))
-            print("progress_message")
-            print(progress_message)
-            print("new_progress_message")
-            print(new_progress_message)
-
-            print(percent)
-            async with progress_message_lock and percent_lock:
-                # check if progress message has changed
-                if new_progress_message != progress_message:
-                    progress_message = new_progress_message
-
-                    # checking text messages that the server is starting to up
-                    expected_messages = [
-                        "Server requested",
-                        "Spawning server...",
-                        f"Server ready at {app.base_url}user/{user.name}/",
-                    ]
-
-                    assert progress_message in expected_messages
-
-                    # checking progress of the servers starting (messages, % progress and events log))
-                    progress_bar = browser.locator('#progress-bar')
-                    percent_el = await browser.wait_for_selector(
-                        '#progress-bar[aria-valuenow]'
-                    )
-                    if new_percent != percent:
-                        percent = new_percent
-                        assert percent in [0, 50, 100]
-
-                    logs = browser.locator('#progress-log-event')
-                    logs_list = [log.text for log in await logs.all() if log.text]
-
-                    if logs_list:
-                        # race condition: progress_message _should_
-                        # be the last log message, but it _may_ be the next one
-                        assert progress_message
-
-                    assert logs_list == expected_messages[: len(logs_list)]
-                    print(len(logs_list))
-            # wait for some time before checking again
-            await asyncio.sleep(0.2)
-
-        # wait for the launch button to become detached
-        await launch_btn.wait_for(state='detached')
-
-
-@pytest.mark.xfail(reason="flaky on CI")
-async def test_spawn_pending_progress12(app, browser, no_patience, user, slow_spawn):
-    """verify that the server process messages are showing up to the user
-    when the server is going to start up"""
-    # begin starting the server
-    # visit the spawn-pending page
-
-    await open_spawn_pending(app, browser, user)
-    launch_btn = browser.locator('//div[@class="text-center"]').get_by_role(
-        "button", name="Launch Server"
-    )
-    await expect(launch_btn).to_be_enabled()
-
-    async with browser.expect_navigation(url=f"**/user/{user.name}/"):
+    async with browser.expect_navigation(
+        url=re.compile(".*/spawn-pending/" + f"{user.name}")
+    ):
         await launch_btn.click()
-
-        # use context manager to synchronize access to progress_message
-        async with contextlib.AsyncExitStack() as stack:
-            progress_message_lock = asyncio.Lock()
-            progress_message = ""
-            percent_lock = asyncio.Lock()
-            percent = 0
-            logs_list = []
-            data = {
-                "progress_message": progress_message,
-                "percent": percent,
-                "logs_list": logs_list,
-            }
-
-            # write the dictionary to a JSON file
-            with open("test_data.json", "w") as f:
-                json.dump(data, f)
-            print(data)
-            # loop until progress bar disappears
-            while '/spawn-pending/' in browser.url:
-                # get the latest progress message
-                # try:
-                new_progress_message = await browser.locator(
-                    "#progress-message"
-                ).inner_text()
-                percent_el = await browser.wait_for_selector(
-                    '#progress-bar[aria-valuenow]'
-                )
-                # percent_el.is_visible()
-                new_percent = int(await percent_el.get_attribute('aria-valuenow'))
-                print("progress_message")
-                print(progress_message)
-                print("new_progress_message")
-                print(new_progress_message)
-
-                print(percent)
-                # except ElementNotInteractableError:
-
-                # print(print("Element is not interactable"))
-                async with progress_message_lock and percent_lock:
-                    # check if progress message has changed
-                    if new_progress_message != progress_message:
-                        progress_message = new_progress_message
-
-                        # checking text messages that the server is starting to up
-                        expected_messages = [
-                            "Server requested",
-                            "Spawning server...",
-                            f"Server ready at {app.base_url}user/{user.name}/",
-                        ]
-
-                        assert progress_message in expected_messages
-
-                        # checking progress of the servers starting (messages, % progress and events log))
-                        progress_bar = browser.locator('#progress-bar')
-                        percent_el = await browser.wait_for_selector(
-                            '#progress-bar[aria-valuenow]'
-                        )
-                        if new_percent != percent:
-                            percent = new_percent
-                            assert percent in range(0, 100)
-
-                        logs = browser.locator('#progress-log-event')
-                        new_logs_list = [
-                            log.text for log in await logs.all() if log.text
-                        ]
-
-                        if new_logs_list:
-                            # race condition: progress_message _should_
-                            # be the last log message, but it _may_ be the next one
-                            assert progress_message
-
-                        assert new_logs_list == expected_messages[: len(new_logs_list)]
-                        print(len(new_logs_list))
-
-                        # save the progress message, percent and logs list to a dictionary
-                        data = {
-                            "progress_message": progress_message,
-                            "percent": percent,
-                            "logs_list": logs_list,
-                        }
-
-                        # write the dictionary to a JSON file
-                        with open("test_data.json", "w") as f:
-                            json.dump(data, f)
-
-                        # update the logs_list
-                        logs_list = new_logs_list
-                        # print(data)
-                # wait for some time before checking again
-                await asyncio.sleep(0.001)
-
-        # wait for the
-        # await launch_btn.wait_for(state='detached')
-
-
-@pytest.mark.xfail(reason="flaky on CI")
-async def test_spawn_pending_progress33(app, browser, no_patience, user, slow_spawn):
-    """verify that the server process messages are showing up to the user
-    when the server is going to start up"""
-    # begin starting the server
-    # await api_request(app, f"/users/{user.name}/server", method="post")
-    # visit the spawn-pending page
-
-    await open_spawn_pending(app, browser, user)
-    launch_btn = browser.locator('//div[@class="text-center"]').get_by_role(
-        "button", name="Launch Server"
-    )
-    await expect(launch_btn).to_be_enabled()
-
-    await launch_btn.click()
-    # time.sleep(1000)
-    while '/spawn-pending/' in browser.url:
-        progress_message = await browser.run(
-            lambda: browser.locator('#progress-message').inner_text()
-        )
-        # progress_message = await browser.locator('#progress-message').inner_text()
-        assert "" in progress_message
-        # new_progress_message = progress_message
-
-        new_progress_message = await browser.run(
-            lambda: browser.wait_for_selector('#progress-message').wait_for(
-                lambda element, text: text in element.text_content(),
-                args=['Server requested'],
-            )
-        )
-        # new_progress_message=await browser.locator('#progress-message').wait_for(lambda element: 'Server requested' in element.text_content())
-        # new_progress_message.wait_for(has_text:"Server requested")
-        assert "Server requested" in new_progress_message
-        assert "Server requested" in progress_message
-        assert "Spawning server..." in progress_message
-        assert "Server ready at" in progress_message
-
-        # verify logs
-        progress_log = await browser.locator('#progress-log')
-        logs = await progress_log.locator('.progress-log-event').inner_text()
-        expected_logs = [
-            "Server requested",
-            "Spawning server...",
-            f"Server ready at {app.base_url}user/{user.name}/",
-        ]
-        assert logs == "\n".join(expected_logs)
-
-        # verify percent
-        progress_bar = await browser.locator('#progress-bar')
-        percent = await progress_bar.get_attribute('aria-valuenow')
-        assert percent == "100"
-        # await launch_btn.wait_for(state='detached')
-
-
-@pytest.mark.xfail(reason="flaky on CI")
-async def test_spawn_pending_progress3(app, browser, no_patience, user, slow_spawn):
-    """verify that the server process messages are showing up to the user
-    when the server is going to start up"""
-    # begin starting the server
-    # await api_request(app, f"/users/{user.name}/server", method="post")
-    # visit the spawn-pending page
-
-    await open_spawn_pending(app, browser, user)
-    launch_btn = browser.locator('//div[@class="text-center"]').get_by_role(
-        "button", name="Launch Server"
-    )
-    await expect(launch_btn).to_be_enabled()
-
-    await launch_btn.click()
-    # time.sleep(1000)
-    while '/spawn-pending/' in browser.url:
-        # save the progress message, percent and logs list to a dictionary
-
-        progress_message = await browser.locator("#progress-message").inner_text()
-        # checking text messages that the server is starting to up
-
-        # checking progress of the servers starting (messages, % progress and events log))
-        progress_bar = browser.locator('#progress-bar')
-        progress = await browser.locator("#progress-message").all()
-        logs = browser.locator('#progress-log-event')
-        percent_el = await browser.wait_for_selector('#progress-bar[aria-valuenow]')
-        percent = int(await percent_el.get_attribute('aria-valuenow'))
-        logs_list = [log.text for log in await logs.all() if log.text]
+    # wait for progress message to appear
+    progress = browser.locator("#progress-message")
+    progress_message = await progress.inner_text()
+    async with browser.expect_navigation(url=re.compile(".*/user/" + f"{user.name}/")):
+        # wait for log messages to appear
         expected_messages = [
             "Server requested",
             "Spawning server...",
             f"Server ready at {app.base_url}user/{user.name}/",
         ]
-        data = {
-            "progress_message": progress_message,
-            "percent": percent,
-            "logs_list": logs_list,
-        }
+        print(user.spawner.ready)
 
-        # write the dictionary to a JSON file
-        with open("test_data.json", "w") as f:
-            json.dump(data, f)
-        print(data)
+        while not user.spawner.ready:
+            # await browser.pause()
 
+            await expect(progress).to_have_text(expected_messages[-1], force=True)
+            await expect(
+                browser.locator("div.progress-log-event").nth(-1)
+            ).to_have_text(expected_messages[-1], timeout=4_800)
+            print("123")
         if progress_message:
             assert progress_message in expected_messages
-        if logs_list:
-            # race condition: progress_message _should_
-            # be the last log message, but it _may_ be the next one
-            assert progress_message
 
-        assert logs_list == expected_messages[: len(logs_list)]
-        # await asyncio.sleep(0.2)
-        await launch_btn.wait_for(state='detached')
-        # await browser.wait_for_selector_to_be_removed(launch_btn)
-        # await launch_btn.wait_for_element_state('detached')
-        # print(len(percent))
-
-        # percent = await progress_bar.get_attribute('style')
-        # percent = percent.split(';')[0].split(':')[1].strip()
-
-        # only include non-empty log messages
-        # avoid partially-created elements
-        # logs_list = [log.text for log in await logs.all() if log.text]
-        # message_list = [progress_message for message in await progress.all() if progress_message]
-        # per_list = [percent for per in  percent if percent]
-        # print(logs_list)
-        # print(message_list)
-        # if not browser.locator('#progress-bar').is_visible():
-        # break
-        # print(per_list)
-        """# Check both percent and progress_message
-        if percent < 50:
-            assert len(logs_list) <2
-            assert await progress_message == "Server requested"
-        elif percent <100:
-            assert len(logs_list) == 2
-            assert logs_list[0] == "Spawning server..."
-        elif percent == 100:
-            assert len(logs_list) > 2
-            assert logs_list[-1] == f"Server ready at {app.base_url}user/{user.name}/" """
-        """
-        # Check progress_message if percent is not yet updated
-        if percent < 50:
-            assert await progress_message == "Server requested"
-        elif percent<100:
-            assert await progress_message == "Spawning server..."
-        elif percent == 100:
-            assert await progress_message == f"Server ready at {app.base_url}user/{user.name}/" """
+    await expect(browser).to_have_url(re.compile(".*/user/" + f"{user.name}/"))
+    assert user.spawner.ready
 
 
-# TODO: finish
-@pytest.mark.xfail(reason="flaky on CI")
 async def test_spawn_pending_progress2(app, browser, no_patience, user, slow_spawn):
     """verify that the server process messages are showing up to the user
     when the server is going to start up"""
-    # begin starting the server
-    # await api_request(app, f"/users/{user.name}/server", method="post")
-    # visit the spawn-pending page
 
+    # visit the spawn-pending page
     await open_spawn_pending(app, browser, user)
-    launch_btn = browser.locator('//div[@class="text-center"]').get_by_role(
+    launch_btn = browser.locator("//div[@class='text-center']").get_by_role(
         "button", name="Launch Server"
     )
     await expect(launch_btn).to_be_enabled()
 
-    await launch_btn.click(force=True)
-
-    await browser.wait_for_selector('text=Server requested')
-    while '/spawn-pending/' in browser.url:
-
-        # await browser.locator(":nth-match(:text('Server requested'), 1)").wait_for()
-        progress_bar = browser.locator('#progress-bar')
-        await progress_bar.is_visible()
-        # FIXME: reliability may be due to page changing between `find_element` calls
-        # maybe better if we get HTML once and parse with beautifulsoup
-        progress_message = browser.locator("#progress-message").inner_text()
-        # checking progress of the servers starting (messages, % progress and events log))
-
-        progress_bar = browser.locator('#progress-bar')
-        progress = browser.locator("#progress-message")
-        logs = browser.locator('#progress-log-event')
-        percent = await progress_bar.get_attribute('style')
-        percent = percent.split(';')[0].split(':')[1].strip()
-        # only include non-empty log messages
-        # avoid partially-created elements
-        logs_list = [log.text for log in await logs.all() if log.text]
-
+    # begin starting the server
+    async with browser.expect_navigation(
+        url=re.compile(".*/spawn-pending/" + f"{user.name}")
+    ):
+        await launch_btn.click()
+    # wait for progress message to appear
+    progress = browser.locator("#progress-message")
+    progress_message = await progress.inner_text()
+    async with browser.expect_navigation(url=re.compile(".*/user/" + f"{user.name}/")):
+        # wait for log messages to appear
         expected_messages = [
             "Server requested",
             "Spawning server...",
             f"Server ready at {app.base_url}user/{user.name}/",
         ]
-
-        if progress_message:
-            assert await progress_message in expected_messages
-        if logs_list:
+        while not user.spawner.ready:
+            logs_list = [
+                await log.inner_text()
+                for log in await browser.locator("div.progress-log-event").all()
+            ]
+            """if len(logs_list)==2:
+                await expect(browser.locator('#progress-bar')).to_have_attribute('aria-valuenow', '50')
+                print("Waiting for")"""
+            if progress_message:
+                assert progress_message in expected_messages
             # race condition: progress_message _should_
             # be the last log message, but it _may_ be the next one
-            assert await progress_message
+            if logs_list:
+                assert progress_message
             assert logs_list == expected_messages[: len(logs_list)]
-        """
-        if len(logs_list) < 2:
-            assert percent == "0%"
-        elif len(logs_list) == 2:
-            assert percent == "50%"
-        elif len(logs_list) >= 3:
-            assert percent == "100%"
-            """
-
-    # assert await progress_bar.get_attribute('aria-valuenow') == '0'
-    # assert await progress_bar.get_attribute('style') == 'width: 0%;'
-    # wait for event log to appear and check initial message
-    # event_log = browser.locator('#progress-log')
-    # await event_log.click()
-
-    # time.sleep(100)
-    # assert await event_log.locator("nth=0").inner_text() == 'Server requested'
-    """   
-    while '/spawn-pending/' in browser.url:
-        progress_percent = await browser.wait_for_selector('#sr-progress').inner_text().all()
-        #progress_log = await browser.get_by_text("Server requested").wait_for()
-        #progress_log = await browser.locator('#progress-log:visible')
-        #progress_log =  await browser.locator('#progress-log-event').all()
-        #progress_list = [progress_list.append(await log.inner_text()) for log in progress_log]
-        print(progress_percent)
-        #progress_logs= await progress_log.all()"""
-
-    # time.sleep(1000)
-    """<div class="text-center">
-     
-      <div class="progress">
-        <div id="progress-bar" class="progress-bar" role="progressbar" aria-valuenow="50" aria-valuemin="0" aria-valuemax="100" style="width: 50%;">
-          <span class="sr-only">
-            <span id="sr-progress">50%</span> Complete</span>
-        </div>
-      </div>
-      <p id="progress-message">Spawning server...</p>
-    </div>"""
-
-    """<div class="col-md-8 col-md-offset-2">
-      <details id="progress-details">
-        <summary>Event log</summary>
-        <div id="progress-log">
-            <div class="progress-log-event">Server requested</div>
-            <div class="progress-log-event">Spawning server...</div></div>
-      </details>
-    </div>"""
-    # await browser.get_by_text("Event log").inner_text().wait_for()
-    # server_requested_message = await progress_log.locator('.progress-log-event').filter(has_text='Server requested').wait_for()
-    # progress_percent = await browser.wait_for_selector('#sr-progress')
-    # progress_percents = await progress_percent.inner_text()
-    # log =browser.wait_for_selector('#progress-log-event')
-    # print(progress_percents)
-
-    # verify initial progress bar state
-    # progress_bar = await browser.wait_for_selector('.progress-bar')
-    # progress_text = await browser.wait_for_selector('#sr-progress')
-    # assert await progress_bar.get_attribute('aria-valuenow') == '0'
-    # assert await progress_text.inner_text() == '0%'
-
-    # wait for the first progress update
-    # await browser.wait_for_selector('.progress-log-event')
-    # progress_bar = await browser.wait_for_selector('.progress-bar')
-    # progress_text = await browser.wait_for_selector('#sr-progress')
-    # assert await progress_bar.get_attribute('aria-valuenow') == '0'
-    # assert await progress_text.inner_text() == '0%'
-    # time.sleep(1000)
-    # simulate progress updates
-    """progress_url = url_path_join(
-        public_host(app), app.hub.base_url, f"api/users/{user.name}/server/progress")
-    await browser.route(progress_url, lambda route: route.continue_())
-    # click the Launch Server button and wait for progress updates
-    await launch_btn.click()
-
-    progress_log = browser.locator('#progress-log')
-    evt = await browser.wait_for_event('message', timeout=10)
-    await expect(evt.data).to_contain('Server requested')
-    await expect(evt.data).to_contain('"progress":0')
-    evt = await browser.wait_for_event('message', timeout=10)
-    await expect(evt.data).to_contain('Spawning server...')
-    await expect(evt.data).to_contain('"progress":50')
-    evt = await browser.wait_for_event('message', timeout=10)
-    await expect(evt.data).to_contain('Server ready at')
-    await expect(evt.data).to_contain('"progress":100')"""
+    await expect(browser).to_have_url(re.compile(".*/user/" + f"{user.name}/"))
+    assert user.spawner.ready
 
 
 async def test_spawn_pending_server_ready(app, browser, user):
@@ -1118,6 +557,7 @@ async def test_revoke_token(app, browser, token_type, user):
         assert len(user.api_tokens) == 2
         for button in await browser.query_selector_all('.revoke-token-btn'):
             await button.click()
+            await browser.wait_for_load_state("domcontentloaded")
         await expect(revoke_btns).to_have_count(0)
         await expect(revoke_btns).to_have_count(len(user.api_tokens))
 
@@ -1272,15 +712,18 @@ async def test_oauth_page(
     service_url = url_path_join(public_url(app, service) + 'owhoami/?arg=x')
     await browser.goto(service_url)
 
-    expected_redirect_url = app.base_url + f"services/{service.name}/oauth_callback"
-    expected_client_id = f"client_id=service-{service.name}".replace("=", "%3D")
+    expected_redirect_url = url_path_join(
+        app.base_url + f"services/{service.name}/oauth_callback"
+    )
+    expected_client_id = f"service-{service.name}"
 
     # decode the URL
-    decoded_browser_url = urllib.parse.unquote(urllib.parse.unquote(browser.url))
+    query_params = parse_qs(urlparse(browser.url).query)
+    query_params = parse_qs(urlparse(query_params['next'][0]).query)
 
     # check if the client_id and redirected url in the browser_url
-    assert expected_client_id in browser.url
-    assert expected_redirect_url in decoded_browser_url
+    assert expected_client_id == query_params['client_id'][0]
+    assert expected_redirect_url == query_params['redirect_uri'][0]
 
     # login user
     await login(browser, user.name, password=str(user.name))
@@ -1491,7 +934,6 @@ async def test_paging_on_admin_page(
         )
 
 
-# TODO: find out how to replace await asyncio.sleep(1)
 @pytest.mark.parametrize(
     "added_count_users, search_value",
     [
@@ -1519,8 +961,6 @@ async def test_search_on_admin_page(
     element_search = browser.locator('//input[@name="user_search"]')
     await element_search.click()
     await element_search.fill(search_value, force=True)
-    # TODO: find out how to replace sleep
-    await asyncio.sleep(1)
     await browser.wait_for_load_state("networkidle")
     # get the result of the search from db
     users_count_db_filtered = (
@@ -1528,21 +968,20 @@ async def test_search_on_admin_page(
     )
     # get the result of the search
     filtered_list_on_page = browser.locator('//tr[@class="user-row"]')
-
-    # check that count of users matches with number of users on the footer
     displaying = browser.get_by_text("Displaying")
-
-    # check that users names contain the search value in the filtered list
-    for element in await filtered_list_on_page.get_by_test_id("user-row-name").all():
-        await expect(element).to_contain_text(re.compile(f".*{search_value}.*"))
     if users_count_db_filtered <= 50:
+        await expect(filtered_list_on_page).to_have_count(users_count_db_filtered)
         await expect(displaying).to_contain_text(
             re.compile(f"0-{users_count_db_filtered}")
         )
-        await expect(filtered_list_on_page).to_have_count(users_count_db_filtered)
+        # check that users names contain the search value in the filtered list
+        for element in await filtered_list_on_page.get_by_test_id(
+            "user-row-name"
+        ).all():
+            await expect(element).to_contain_text(re.compile(f".*{search_value}.*"))
     else:
-        await expect(displaying).to_contain_text(re.compile("0-50"))
         await expect(filtered_list_on_page).to_have_count(50)
+        await expect(displaying).to_contain_text(re.compile("0-50"))
         # click on Next button to verify that the rest part of filtered list is displayed on the next page
         await browser.get_by_role("button", name="Next").click()
         filtered_list_on_next_page = browser.locator('//tr[@class="user-row"]')
