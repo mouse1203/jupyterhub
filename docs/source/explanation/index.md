@@ -1,8 +1,14 @@
 # Explanation
 
-The explanation guides are written to provide big-picture explanations of how JupyterHub works. They are meant to build your understanding of particular topics.
+_Explanation_ documentation provide big-picture descriptions of how JupyterHub works. This section is meant to build your understanding of particular topics.
 
 ```{toctree}
-:maxdepth: 2
+:maxdepth: 1
 
+capacity-planning
+database
+websecurity
+oauth
+singleuser
+../rbac/index
 ```

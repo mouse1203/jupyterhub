@@ -1,22 +1,27 @@
-# Technical Reference
+(reference-index)=
 
-This section covers more of the details of the JupyterHub architecture, as well as
-what happens under-the-hood when you deploy and configure your JupyterHub.
+# Reference
+
+_Reference_ documentation provide technical descriptions about JupyterHub and how it works.
+This section is divided into two broad subsections:
+
+1. Technical reference.
+2. API reference.
+
+---
 
 ```{toctree}
-:maxdepth: 2
+:maxdepth: 1
 
 technical-overview
-urls
-websecurity
 authenticators
 spawners
-services
-rest-api
-server-api
-monitoring
-database
-../events/index
 config-reference
-oauth
+services
+urls
+event-logging
+monitoring
+gallery-jhub-deployments
+changelog
+api/index.md
 ```

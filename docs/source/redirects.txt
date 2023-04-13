@@ -1,6 +1,7 @@
 # This file contains rediraffe redirects as generated from the docs/source/conf.py file
 # For more information, see rediraffe configuration in the conf.py file.
 
+"changelog.md" "reference/changelog.md"
 "getting-started/faq.md" "faq/faq.md"
 "reference/api-only.md" "howto/api-only.md"
 "reference/config-ghoauth.md" "howto/configuration/config-ghoauth.md"
@@ -8,7 +9,7 @@
 "admin/log-messages.md" "howto/log-messages.md"
 "reference/proxy.md" "howto/proxy.md"
 "reference/templates.md" "howto/templates.md"
-"quickstart-docker.md" "tutorial/installation/quickstart-docker.md"
+"quickstart-docker.md" "tutorial/quickstart-docker.md"
 "reference/config-examples.md" "howto/index.md"
 "getting-started/institutional-faq.md" "faq/institutional-faq.md"
 "troubleshooting.md" "faq/troubleshooting.md"
@@ -17,5 +18,6 @@
 "reference/rest.md" "howto/rest.md"
 "reference/separate-proxy.md" "howto/separate-proxy.md"
 "admin/upgrading.md" "howto/upgrading.md"
-"installation-basics.md" "tutorial/installation/installation-basics.md"
-"quickstart.md" "tutorial/installation/quickstart.md"
+"installation-basics.md" "tutorial/installation-basics.md"
+"quickstart.md" "tutorial/quickstart.md"
+"events/index.md" "reference/event-logging.md"

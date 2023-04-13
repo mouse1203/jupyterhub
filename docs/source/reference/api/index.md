@@ -1,6 +1,6 @@
 (api-index)=
 
-# JupyterHub API
+# JupyterHub API Reference
 
 <!--
     Below is a MyST field list, using MyST substitution, as supported
@@ -20,11 +20,10 @@ information on:
 - making an API request programmatically using the requests library
 - learning more about JupyterHub's API
 
-JupyterHub API Reference:
-
 ```{toctree}
-:maxdepth: 3
+:maxdepth: 1
 
+../rest-api
 app
 auth
 spawner
